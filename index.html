@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Veilbeam – Gesichter anonymisieren (Verpixeln & Blur)</title>
+
+  <!-- Favicon aus Logo -->
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Cdefs%3E%3ClinearGradient id="g1" x1="0" y1="0" x2="1" y2="1"%3E%3Cstop offset="0" stop-color="%236aa6ff"/%3E%3Cstop offset="1" stop-color="%238bd1ff"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x="6" y="6" width="52" height="52" rx="12" fill="url(%23g1)" opacity="0.22"/%3E%3Ccircle cx="32" cy="32" r="14" fill="none" stroke="%238bd1ff" stroke-width="3"/%3E%3Cg id="pixels" opacity="0.95"%3E%3Crect x="38" y="16" width="4" height="4" fill="%236aa6ff"/%3E%3Crect x="44" y="16" width="4" height="4" fill="%238bd1ff"/%3E%3Crect x="50" y="16" width="4" height="4" fill="%236aa6ff"/%3E%3Crect x="38" y="22" width="4" height="4" fill="%238bd1ff" opacity="0.9"/%3E%3Crect x="44" y="22" width="4" height="4" fill="%236aa6ff"/%3E%3Crect x="50" y="22" width="4" height="4" fill="%238bd1ff"/%3E%3Crect x="38" y="28" width="4" height="4" fill="%236aa6ff" opacity="0.85"/%3E%3Crect x="44" y="28" width="4" height="4" fill="%238bd1ff"/%3E%3Crect x="50" y="28" width="4" height="4" fill="%236aa6ff"/%3E%3C/g%3E%3Cpath d="M10 10 L54 54" stroke="%236aa6ff" stroke-width="3" stroke-linecap="round" opacity=".65"/%3E%3C/svg%3E' />
+
+
+  <!-- Meta (ohne Social Media) -->
+  <meta name="description" content="Veilbeam anonymisiert Gesichter direkt im Browser – per Verpixelung oder Blur. Keine Uploads, alles lokal." />
+  <meta name="keywords" content="Gesichter anonymisieren, Verpixeln, Blur, Pixelate, Datenschutz, Bildbearbeitung, offline, Browser" />
+  <meta name="author" content="Wolfgang Saal" />
+  <meta name="robots" content="index,follow" />
+  <meta name="application-name" content="Veilbeam" />
+  <meta name="theme-color" content="#0f1115" />
+  <meta name="color-scheme" content="dark light" />
+
+  <style>
+    :root{--bg:#0f1115;--panel:#151822;--muted:#262a36;--text:#e6e8ef;--sub:#9aa1b2;--accent:#6aa6ff;--accent-2:#8bd1ff;--danger:#ff6b6b;--ok:#2d7a3a}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0f1115,#0b0d12);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    header{position:sticky;top:0;z-index:10;background:rgba(15,17,21,.8);backdrop-filter:blur(8px);border-bottom:1px solid #1b1f2b}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    h1{font-size:20px;margin:0 0 4px 0;letter-spacing:.2px;display:flex;align-items:center;gap:10px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand svg{width:56px;height:56px}
+    .sub{color:#9aa1b2}
+
+    .grid{display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+    @media (max-width:1024px){.grid{grid-template-columns:1fr}}
+
+    .panel{background:var(--panel);border:1px solid #1b1f2b;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+    .panel .hd{padding:14px 14px 10px;color:var(--accent-2);font-weight:800;font-size:14px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;position:relative}
+    .panel .hd::before{content:"";width:8px;height:8px;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent-2));box-shadow:0 0 0 3px rgba(106,166,255,.15)}
+    .panel .bd{padding:14px}
+
+    .stack{display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .row.tight{gap:8px}
+
+    label{color:var(--sub)}
+    input[type="range"]{width:100%}
+
+    .seg{display:flex;border:1px solid #2a3040;background:#0e1118;border-radius:10px;overflow:hidden}
+    .seg input{display:none}
+    .seg label{padding:9px 12px;cursor:pointer;color:#aeb6ca;user-select:none}
+    .seg input:checked+label{background:linear-gradient(180deg,#1b2130,#111520);color:var(--text)}
+    .seg.small label{padding:7px 10px;font-size:12px}
+
+    .subpanel{border:1px solid #2a3040;background:#0e1118;border-radius:12px;padding:12px}
+    .subpanel .title{margin:0 0 8px 0;font-weight:800;letter-spacing:.02em;color:var(--accent-2);font-size:13px;display:flex;align-items:center;gap:8px}
+    .subpanel .title::before{content:"";width:6px;height:6px;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent-2));box-shadow:0 0 0 2px rgba(106,166,255,.12)}
+
+    .uploader{border:2px dashed #3a4152;border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:.2s;color:#c7cede;background:#0f131c}
+    .uploader:hover{background:#0f151f;border-color:#4a5164}
+    .uploader input{display:none}
+    .uploader .hint{color:#9aa1b2;margin-top:6px}
+
+    .canvasWrap{position:relative;background:#0b0d12;border:1px solid #1b1f2b;border-radius:14px;overflow:auto;min-height:460px;touch-action:none}
+    .checker{position:absolute;inset:0;background:
+      linear-gradient(45deg,#1a1f2d 25%,transparent 25%),
+      linear-gradient(-45deg,#1a1f2d 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#1a1f2d 75%),
+      linear-gradient(-45deg,transparent 75%,#1a1f2d 75%);
+      background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0}
+
+    .stage{position:relative;transform-origin:top left;display:inline-block}
+    canvas{display:block;max-width:none;touch-action:none}
+    #imageCanvas{position:relative;z-index:1}
+    #overlayCanvas{position:absolute;inset:0;z-index:2;pointer-events:none}
+
+    .zoomControls{position:absolute;top:8px;right:8px;display:flex;gap:6px;z-index:5}
+    .zoomControls button{padding:6px 10px;font-size:14px}
+
+    .busy{position:absolute;inset:0;display:none;place-items:center;background:rgba(10,12,18,.35);backdrop-filter:blur(2px);z-index:3}
+    .busy.on{display:grid}
+    .spinner{width:44px;height:44px;border-radius:50%;border:4px solid #2a3040;border-top-color:#6aa6ff;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .kbd{display:inline-block;padding:1px 6px;border:1px solid #2b3040;border-bottom-width:2px;border-radius:6px;background:#0f1420;color:#c7d0e2;font-weight:700}
+    .muted{color:#9aa1b2}
+    .grow{flex:1}
+
+    footer{border-top:1px solid #1b1f2b;background:#0f1115;color:#9aa1b2}
+    .footerbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .footer-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .badges{display:flex;gap:8px}
+    footer a{color:#a9c7ff;text-decoration:none}
+    footer a:hover{text-decoration:underline}
+
+    .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#aeb6ca;background:#0e1118;border:1px solid #2a3040;border-radius:999px;padding:2px 8px}
+    .badge.ok{border-color:var(--ok);color:#bfe7c6;background:#0e1813}
+
+    #errbox{position:fixed;bottom:16px;left:16px;max-width:520px;padding:10px 12px;border:1px solid #703b3b;background:#2a1111;color:#ffdede;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:9999;display:none}
+
+    .toolgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .toolbtn{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:800;background:#0e1118;border:1px solid #2a3040;color:var(--text);transition:border-color .2s,background .2s,box-shadow .2s,transform .05s}
+    .toolbtn:hover{border-color:#3b4459;background:#121724;box-shadow:0 6px 16px rgba(0,0,0,.28)}
+    .toolbtn:active{transform:translateY(1px)}
+    .toolbtn[disabled]{opacity:.55;cursor:not-allowed}
+    .toolbtn .ic{width:18px;height:18px;flex:none}
+    .toolbtn .txt{line-height:1.2}
+    .toolbtn .subtxt{display:block;color:#9aa1b2;font-weight:600;font-size:12px}
+
+    .sub .accent-grad{background:linear-gradient(180deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1 class="brand">
+        <!-- simples Logo -->
+        <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6aa6ff"/>
+      <stop offset="1" stop-color="#8bd1ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Grundfläche -->
+  <rect x="6" y="6" width="52" height="52" rx="12" fill="url(#g1)" opacity="0.22"/>
+
+  <!-- Kreis / „Linse“ -->
+  <circle cx="32" cy="32" r="14" fill="none" stroke="#8bd1ff" stroke-width="3"/>
+
+  <!-- Verpixelungs-Kästchen -->
+  <g id="pixels" opacity="0.95">
+    <!-- Reihe 1 -->
+    <rect x="38" y="16" width="4" height="4" fill="#6aa6ff"/>
+    <rect x="44" y="16" width="4" height="4" fill="#8bd1ff"/>
+    <rect x="50" y="16" width="4" height="4" fill="#6aa6ff"/>
+    <!-- Reihe 2 -->
+    <rect x="38" y="22" width="4" height="4" fill="#8bd1ff" opacity="0.9"/>
+    <rect x="44" y="22" width="4" height="4" fill="#6aa6ff"/>
+    <rect x="50" y="22" width="4" height="4" fill="#8bd1ff"/>
+    <!-- Reihe 3 -->
+    <rect x="38" y="28" width="4" height="4" fill="#6aa6ff" opacity="0.85"/>
+    <rect x="44" y="28" width="4" height="4" fill="#8bd1ff"/>
+    <rect x="50" y="28" width="4" height="4" fill="#6aa6ff"/>
+  </g>
+
+  <!-- Diagonaler „Strahl“ -->
+  <path d="M10 10 L54 54" stroke="#6aa6ff" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+</svg>
+
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6aa6ff"/><stop offset="1" stop-color="#8bd1ff"/>
+            </linearGradient>
+          </defs>
+          <rect x="6" y="6" width="52" height="52" rx="12" fill="url(#g1)" opacity="0.22"/>
+          <circle cx="32" cy="32" r="14" fill="none" stroke="#8bd1ff" stroke-width="3"/>
+          <path d="M10 10 L54 54" stroke="#6aa6ff" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+        </svg>
+        <span>Veilbeam – Gesichter anonymisieren</span>
+      </h1>
+      <div class="sub"><b>Veil</b> = „Schleier“ & <b>Beam</b> = „Strahl“ → <b class="accent-grad">Veilbeam</b>: Bild laden → Bereich(e) markieren → <b class="accent-grad">Gesichter anonymisieren!</b></div>
+    </div>
+  </header>
+
+  <main class="wrap grid" id="app">
+    <section class="panel">
+      <div class="hd">Bild & Einstellungen</div>
+      <div class="bd stack">
+        <label class="uploader" id="dropzone">
+          <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/gif, image/bmp, image/tiff" />
+          <div>📁 <b>Bild hierher ziehen</b> oder klicken zum Auswählen (PNG, JPG, WEBP …)</div>
+          <div class="hint">Große Bilder werden 1:1 verarbeitet. <br>Nichts verlässt deinen Browser.</div>
+        </label>
+
+        <div class="subpanel">
+          <p class="title">Auswahlform</p>
+          <div class="seg" role="tablist" aria-label="Auswahlform">
+            <input type="radio" name="mode" id="modeRect" value="rect" checked>
+            <label for="modeRect">Rechteck</label>
+            <input type="radio" name="mode" id="modeCircle" value="circle">
+            <label for="modeCircle">Kreis</label>
+            <input type="radio" name="mode" id="modePoly" value="poly">
+            <label for="modePoly">Polygon</label>
+          </div>
+          <div id="modeHelp" class="muted" style="margin-top:6px"></div>
+        </div>
+
+        <div class="subpanel">
+          <p class="title">Effekt</p>
+          <div class="seg small" role="tablist" aria-label="Effekt">
+            <input type="radio" name="effect" id="effectPixel" value="pixelate" checked>
+            <label for="effectPixel">Verpixeln</label>
+            <input type="radio" name="effect" id="effectBlur" value="blur">
+            <label for="effectBlur">Blur</label>
+          </div>
+
+          <!-- Verpixeln-Steuerung: DEFAULT 7px, MAX 50px -->
+          <div id="pixelControls" class="stack" style="margin-top:10px">
+            <div class="row"><label for="blockSize">Pixelgröße</label><span class="muted" id="paramLabel">7px</span></div>
+            <input id="blockSize" type="range" min="1" max="50" step="1" value="7" />
+            <div class="muted">Wirkt auf <b>ausgewählte Bereiche</b> (oder Standardwert für neue). Pfeile: ±1, <span class="kbd">Shift</span>+Pfeil: ±5. <span class="kbd">Leertaste</span> toggelt aktiv/an.</div>
+          </div>
+
+          <!-- Blur-Steuerung -->
+          <div id="blurControls" class="stack" style="margin-top:10px; display:none">
+            <div class="row"><label for="blurRadius">Blur-Radius</label><span class="muted" id="blurLabel">8px</span></div>
+            <input id="blurRadius" type="range" min="1" max="80" step="1" value="8" />
+            <div class="muted">Wirkt auf <b>ausgewählte Bereiche</b> (oder Standardwert für neue). Pfeile: ±1, <span class="kbd">Shift</span>+Pfeil: ±5. <span class="kbd">Leertaste</span> toggelt aktiv/an.</div>
+          </div>
+
+          <div class="row tight" style="margin-top:4px">
+            <label class="muted" title="Zeigt den Wert je Bereich"><input type="checkbox" id="showBlockTag" checked> Werte im Rahmen anzeigen</label>
+          </div>
+
+          <div class="row tight" style="gap:8px;margin-top:6px">
+            <button class="btn" id="applyAllBtn" disabled>Anwenden (alle neuen)</button>
+            <span class="grow"></span>
+            <span class="muted" id="selCount">0 Bereiche in Warteschlange</span>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <p class="title">Automatische Gesichtserkennung</p>
+          <div class="stack">
+            <div class="row tight" style="gap:10px; align-items:center; flex-wrap:wrap">
+              <button class="btn" id="detectBtn" disabled>Gesichter erkennen</button>
+              <div class="row tight" style="gap:6px">
+                <label class="muted" for="minFacePct">Mindestfläche (%):</label>
+                <input id="minFacePct" type="range" min="0.05" max="10" step="0.05" value="0.2" style="width:160px"/>
+                <span class="muted" id="minFaceLbl">0.20%</span>
+              </div>
+            </div>
+            <div class="row tight" style="gap:12px">
+              <div class="row tight" style="gap:6px">
+                <label class="muted" for="expandPx">Rand (px):</label>
+                <input id="expandPx" type="number" min="0" max="80" value="6" style="width:72px"/>
+              </div>
+              <div class="row tight" style="gap:6px">
+                <label class="muted" for="autoShape">Form:</label>
+                <select id="autoShape">
+                  <option value="oval" selected>Oval (empfohlen)</option>
+                  <option value="rect">Rechteck</option>
+                  <option value="landmark">Landmark-Polygon</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="subpanel">
+          <p class="title">Bereiche verwalten</p>
+          <div class="toolgrid">
+            <button class="toolbtn" id="toggleActiveBtn" disabled title="Aktiv/Passiv umschalten">
+              <span class="txt">Aktiv an/aus<span class="subtxt">Leertaste geht auch</span></span>
+            </button>
+            <button class="toolbtn" id="removeSelectedBtn" disabled title="Markierte Bereiche löschen (Entf)">
+              <span class="txt">Markiertes entfernen<span class="subtxt">Entf-Taste</span></span>
+            </button>
+            <button class="toolbtn" id="clearAutoBtn" disabled title="Alle automatisch erkannten Bereiche entfernen">
+              <span class="txt">Auto-Bereiche löschen<span class="subtxt">Erkennung zurücksetzen</span></span>
+            </button>
+            <button class="toolbtn danger" id="clearAppliedBtn" disabled title="Alle angewendeten Bereiche entfernen">
+              <span class="txt">Alle angewendeten<span class="subtxt">komplett leeren</span></span>
+            </button>
+          </div>
+          <div class="muted" style="margin-top:8px">Auswahl: Klick. <span class="kbd">Shift</span>+Klick = Mehrfachauswahl. Ziehen im Rahmen = verschieben, Kanten/Ecken = Größe ändern.</div>
+        </div>
+
+        <div class="row" style="margin-top:2px">
+          <button class="btn" id="downloadPng" disabled>Download PNG</button>
+          <button class="btn" id="downloadJpg" disabled>Download JPG</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd">Vorschau & Bearbeitung</div>
+      <div class="bd">
+        <div class="canvasWrap" id="canvasWrap">
+          <div class="checker"></div>
+          <div class="stage" id="stage">
+            <canvas id="imageCanvas" aria-label="Bildbearbeitungsfläche"></canvas>
+            <canvas id="overlayCanvas" aria-hidden="true"></canvas>
+          </div>
+          <div class="zoomControls">
+            <button class="btn" id="zoomOut" title="Zoom out">−</button>
+            <button class="btn" id="zoomIn" title="Zoom in">+</button>
+            <button class="btn" id="zoomFit" title="Auf Ansicht einpassen">Fit</button>
+            <button class="btn" id="zoom100" title="1:1">100%</button>
+          </div>
+          <div class="busy" id="busy"><div class="spinner" aria-label="Bitte warten"></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footerbar">
+      <div>© 2025 Wolfgang Saal - <b>Veilbeam</b>.</div>
+      <div class="footer-right">
+        <div class="badges">
+          <span id="versionBadge" class="badge">v0.0.0</span>
+          <span id="jsAlive" class="badge">JS lädt…</span>
+        </div>
+        <a href="https://github.com/wsaal68" target="_blank" rel="noopener">GitHub: wsaal68</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="errbox" role="alert"></div>
+
+  <script>
+/* =========================
+   APP META
+========================= */
+const APP_VER  = '2.2.0';
+const BUILD_TS = '2025-09-08';
+
+(function(){
+  'use strict';
+
+  // --- kleine Fehleranzeige ---
+  function showError(msg){
+    var box=document.getElementById('errbox');
+    if(!box) return;
+    box.textContent=String(msg||'Unbekannter Fehler');
+    box.style.display='block';
+    clearTimeout(showError._t);
+    showError._t=setTimeout(function(){ box.style.display='none'; }, 7000);
+  }
+
+  // Warten bis DOM fertig: vermeidet Timing-/Parsing-Probleme
+  window.addEventListener('DOMContentLoaded', function(){
+    try{
+      // ===== Badges =====
+      var vb=document.getElementById('versionBadge');
+      if(vb) vb.textContent = 'v'+APP_VER+' · Build '+BUILD_TS;
+      var ja=document.getElementById('jsAlive');
+      if(ja){ ja.textContent='JS aktiv'; ja.classList.add('ok'); }
+
+      // ===== Shortcuts =====
+      var canvas=document.getElementById('imageCanvas');
+      var overlay=document.getElementById('overlayCanvas');
+      var stage=document.getElementById('stage');
+      var wrap=document.getElementById('canvasWrap');
+      var ctx=canvas.getContext('2d');
+      var octx=overlay.getContext('2d');
+
+      // Controls
+      var fileInput=document.getElementById('fileInput');
+      var dropzone=document.getElementById('dropzone');
+      var blockSizeInput=document.getElementById('blockSize');
+      var paramLabel=document.getElementById('paramLabel');
+      var blurRadiusInput=document.getElementById('blurRadius');
+      var blurLabel=document.getElementById('blurLabel');
+      var applyAllBtn=document.getElementById('applyAllBtn');
+      var detectBtn=document.getElementById('detectBtn');
+      var autoShape=document.getElementById('autoShape');
+      var minFacePct=document.getElementById('minFacePct');
+      var minFaceLbl=document.getElementById('minFaceLbl');
+      var expandPx=document.getElementById('expandPx');
+      var showBlockTag=document.getElementById('showBlockTag');
+      var toggleActiveBtn=document.getElementById('toggleActiveBtn');
+      var removeSelectedBtn=document.getElementById('removeSelectedBtn');
+      var clearAutoBtn=document.getElementById('clearAutoBtn');
+      var clearAppliedBtn=document.getElementById('clearAppliedBtn');
+      var downloadPngBtn=document.getElementById('downloadPng');
+      var downloadJpgBtn=document.getElementById('downloadJpg');
+      var selCount=document.getElementById('selCount');
+      var busyEl=document.getElementById('busy');
+      var zoomInBtn=document.getElementById('zoomIn');
+      var zoomOutBtn=document.getElementById('zoomOut');
+      var zoomFitBtn=document.getElementById('zoomFit');
+      var zoom100Btn=document.getElementById('zoom100');
+      var effectPixel=document.getElementById('effectPixel');
+      var effectBlur=document.getElementById('effectBlur');
+      var pixelControls=document.getElementById('pixelControls');
+      var blurControls=document.getElementById('blurControls');
+      var modeHelp=document.getElementById('modeHelp');
+
+      // ===== State =====
+      var mode='rect';
+      ['modeRect','modeCircle','modePoly'].forEach(function(id){
+        var r=document.getElementById(id);
+        if(r) r.addEventListener('change',function(){
+          var c=document.querySelector('input[name="mode"]:checked');
+          mode=c?c.value:'rect';
+          resetInteraction(); setModeHelp(); renderOverlay();
+        });
+      });
+
+      var img=null, originalSrc=null, originalName='';
+      var selections=[], appliedSelections=[], selectedAreas=[], currentSel=null, polyPoints=[];
+      var isDragging=false, start=null;
+      var defaultBlockSize=Number(blockSizeInput.value)||7;   // DEFAULT 7px
+      var defaultBlurRadius=Number(blurRadiusInput.value)||8;
+      var defaultEffect='pixelate'; // 'pixelate' | 'blur'
+
+      var editMode=null, editTarget=null, activeHandle=null, vertexSelect=null;
+      var HANDLE_SIZE=14, HANDLE_MARGIN=10, VERT_R=6;
+
+      var zoom=1, MIN_Z=0.1, MAX_Z=8;
+
+      function setCanvasSize(w,h){
+        canvas.width=w; canvas.height=h;
+        overlay.width=w; overlay.height=h;
+        canvas.style.width=w+'px'; canvas.style.height=h+'px';
+        overlay.style.width=w+'px'; overlay.style.height=h+'px';
+      }
+      function setBusy(on){ busyEl.classList.toggle('on', !!on); }
+
+      function drawBase(){
+        var base=new Image();
+        base.onload=function(){
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+          ctx.drawImage(base,0,0);
+          renderCompositePixelation(base);
+        };
+        base.onerror=function(e){ showError('Basisbild konnte nicht geladen werden.'); console.error(e); };
+        base.src=originalSrc;
+      }
+
+      function pathForSelection(c,sel){
+        c.beginPath();
+        if(sel.type==='rect') c.rect(sel.x,sel.y,sel.w,sel.h);
+        else if(sel.type==='circle') c.arc(sel.cx,sel.cy,sel.r,0,Math.PI*2);
+        else if(sel.type==='oval') c.ellipse(sel.cx,sel.cy,sel.rx,sel.ry,0,0,Math.PI*2);
+        else if(sel.type==='polygon'){
+          var pts=sel.points||[]; if(!pts.length) return;
+          c.moveTo(pts[0].x,pts[0].y);
+          for(var i=1;i<pts.length;i++) c.lineTo(pts[i].x,pts[i].y);
+          c.closePath();
+        }
+      }
+      function boundsForSelection(sel){
+        if(sel.type==='rect'){
+          var x=Math.min(sel.x, sel.x+sel.w), y=Math.min(sel.y, sel.y+sel.h);
+          var w=Math.abs(sel.w), h=Math.abs(sel.h); return {x:x,y:y,w:w,h:h};
+        } else if(sel.type==='circle'){
+          return {x:sel.cx-sel.r,y:sel.cy-sel.r,w:sel.r*2,h:sel.r*2};
+        } else if(sel.type==='oval'){
+          return {x:sel.cx-sel.rx,y:sel.cy-sel.ry,w:sel.rx*2,h:sel.ry*2};
+        } else if(sel.type==='polygon'){
+          var xs=sel.points.map(function(p){return p.x;});
+          var ys=sel.points.map(function(p){return p.y;});
+          var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+          var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
+          return {x:minx,y:miny,w:maxx-minx,h:maxy-miny};
+        }
+      }
+      function toCanvasCoords(evt){
+        var rect=canvas.getBoundingClientRect();
+        var rx=canvas.width/rect.width, ry=canvas.height/rect.height;
+        var clientX=(evt.touches?evt.touches[0].clientX:evt.clientX);
+        var clientY=(evt.touches?evt.touches[0].clientY:evt.clientY);
+        return { x:(clientX-rect.left)*rx, y:(clientY-rect.top)*ry };
+      }
+
+      function pixelateSelection(sel){
+        var b=boundsForSelection(sel), x=b.x,y=b.y,w=b.w,h=b.h; if(w<1||h<1) return;
+        var bs=Math.max(1,Math.floor(Number(sel.blockSize)||defaultBlockSize));
+        var srcW=Math.max(1,Math.floor(w/bs));
+        var srcH=Math.max(1,Math.floor(h/bs));
+        var off1=document.createElement('canvas'); off1.width=srcW; off1.height=srcH;
+        var o1=off1.getContext('2d'); o1.imageSmoothingEnabled=true;
+        o1.drawImage(canvas,x,y,w,h,0,0,srcW,srcH);
+        var off2=document.createElement('canvas'); off2.width=w; off2.height=h;
+        var o2=off2.getContext('2d'); o2.imageSmoothingEnabled=false;
+        o2.drawImage(off1,0,0,srcW,srcH,0,0,w,h);
+        ctx.save(); pathForSelection(ctx,sel); ctx.clip(); ctx.drawImage(off2,x,y); ctx.restore();
+      }
+      function blurSelection(sel, baseImg){
+        var radius=Math.max(1,Math.floor(Number(sel.blurRadius)||defaultBlurRadius));
+        ctx.save(); pathForSelection(ctx,sel); ctx.clip();
+        ctx.filter='blur('+radius+'px)'; ctx.drawImage(baseImg,0,0);
+        ctx.filter='none'; ctx.restore();
+      }
+      function renderCompositePixelation(baseImg){
+        if(!img) return;
+        if(!baseImg){
+          var base=new Image();
+          base.onload=function(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(base,0,0);
+            for(var i=0;i<appliedSelections.length;i++){
+              var sel=appliedSelections[i]; if(sel.active===false) continue;
+              if(sel.effect==='blur') blurSelection(sel, base); else pixelateSelection(sel);
+            }
+          };
+          base.src=originalSrc; return;
+        }
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(baseImg,0,0);
+        for(var j=0;j<appliedSelections.length;j++){
+          var s=appliedSelections[j]; if(s.active===false) continue;
+          if(s.effect==='blur') blurSelection(s, baseImg); else pixelateSelection(s);
+        }
+      }
+
+      function drawTag(c,x,y,text){
+        c.save(); c.font='800 12px system-ui,-apple-system,Segoe UI,Roboto,Arial'; c.textBaseline='top';
+        var padX=6,padY=3; var w=Math.ceil(c.measureText(text).width)+padX*2; var h=16+padY*2;
+        c.fillStyle='rgba(0,0,0,0.6)'; c.fillRect(x-2,y-2,w,h);
+        c.strokeStyle='rgba(139,209,255,0.9)'; c.lineWidth=1; c.strokeRect(x-2,y-2,w,h);
+        c.fillStyle='#e6e8ef'; c.fillText(text,x+padX-2,y+padY-2); c.restore();
+      }
+      function getSelLabel(sel){ return sel.effect==='blur' ? ('blur '+(sel.blurRadius||defaultBlurRadius)+'px') : ((sel.blockSize||defaultBlockSize)+'px'); }
+
+      function drawHandles(c,sel){
+        if(sel.type==='polygon') return;
+        var b=boundsForSelection(sel), s=14;
+        var pts=[{x:b.x,y:b.y},{x:b.x+b.w/2,y:b.y},{x:b.x+b.w,y:b.y},{x:b.x,y:b.y+b.h/2},{x:b.x+b.w,y:b.y+b.h/2},{x:b.x,y:b.y+b.h},{x:b.x+b.w/2,y:b.y+b.h},{x:b.x+b.w,y:b.y+b.h}];
+        c.save(); c.fillStyle='#ffe27a'; c.strokeStyle='#cba94a'; c.lineWidth=1;
+        pts.forEach(function(p){ c.beginPath(); c.rect(p.x-s/2,p.y-s/2,s,s); c.fill(); c.stroke(); });
+        if(sel.type==='circle'){
+          var cx=sel.cx+sel.r,cy=sel.cy; c.beginPath(); c.rect(cx-s/2,cy-s/2,s,s); c.fill(); c.stroke();
+        }
+        c.restore();
+      }
+      function drawPolyVertices(c,pts,hi){
+        c.save();
+        for(var i=0;i<pts.length;i++){
+          var p=pts[i]; c.beginPath(); c.arc(p.x,p.y,6,0,Math.PI*2);
+          c.fillStyle=(hi===i)?'#ffd86b':'#ffe27a'; c.strokeStyle='#a07e1f'; c.lineWidth=1; c.fill(); c.stroke();
+        }
+        c.restore();
+      }
+      function drawOpenPolyline(c,pts){
+        if(pts.length<2) return;
+        c.save(); c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
+        for(var i=1;i<pts.length;i++) c.lineTo(pts[i].x,pts[i].y);
+        c.setLineDash([4,3]); c.lineWidth=1.5; c.strokeStyle='rgba(255,226,122,0.85)'; c.stroke(); c.restore();
+      }
+
+      function renderOverlay(){
+        octx.clearRect(0,0,overlay.width,overlay.height);
+        if(!img) return;
+
+        octx.fillStyle='rgba(0,0,0,0.18)'; octx.fillRect(0,0,overlay.width,overlay.height);
+
+        octx.save(); octx.globalCompositeOperation='destination-out';
+        for(var i=0;i<selections.length;i++){ pathForSelection(octx,selections[i]); octx.fill(); }
+        if(currentSel){ pathForSelection(octx,currentSel); octx.fill(); }
+        for(var j=0;j<appliedSelections.length;j++){ pathForSelection(octx,appliedSelections[j]); octx.fill(); }
+        octx.restore();
+
+        function isSel(list,idx){ return selectedAreas.some(function(sa){return sa.list===list && sa.index===idx;}); }
+
+        // applied
+        octx.save();
+        for(var a=0;a<appliedSelections.length;a++){
+          var s=appliedSelections[a];
+          if(isSel('applied',a)){ octx.save(); octx.strokeStyle='rgba(255,226,122,0.85)'; octx.lineWidth=6; pathForSelection(octx,s); octx.stroke(); octx.restore(); }
+          octx.lineWidth=2; octx.setLineDash(s.active===false?[8,6]:[]);
+          octx.strokeStyle=s.active===false?'rgba(160,168,186,0.9)':'rgba(106,166,255,0.95)';
+          pathForSelection(octx,s); octx.stroke();
+          if(showBlockTag && showBlockTag.checked){ var bb=boundsForSelection(s); drawTag(octx,bb.x+4,bb.y+4, getSelLabel(s)); }
+          if(isSel('applied',a)){ drawHandles(octx,s); if(s.type==='polygon') drawPolyVertices(octx,s.points); }
+        }
+        // pending
+        octx.setLineDash([8,6]); octx.strokeStyle='rgba(139,209,255,0.95)';
+        for(var p=0;p<selections.length;p++){
+          var sp=selections[p];
+          if(isSel('pending',p)){ octx.save(); octx.strokeStyle='rgba(255,226,122,0.85)'; octx.lineWidth=6; pathForSelection(octx,sp); octx.stroke(); octx.restore(); }
+          pathForSelection(octx,sp); octx.stroke();
+          if(showBlockTag && showBlockTag.checked){ var b2=boundsForSelection(sp); drawTag(octx,b2.x+4,b2.y+4, getSelLabel(sp)); }
+          if(isSel('pending',p)){ drawHandles(octx,sp); if(sp.type==='polygon') drawPolyVertices(octx,sp.points); }
+        }
+
+        // current temp
+        if(currentSel){
+          octx.setLineDash([4,4]); octx.strokeStyle='rgba(139,209,255,0.95)'; pathForSelection(octx,currentSel); octx.stroke();
+        }
+
+        // in-progress polygon
+        if(mode==='poly' && polyPoints.length){
+          var pts=(currentSel && currentSel.type==='polygon' && currentSel.points)? currentSel.points : polyPoints;
+          drawOpenPolyline(octx, pts); drawPolyVertices(octx, pts, null);
+          var sp0=pts[0]; if(sp0){ octx.save(); octx.beginPath(); octx.arc(sp0.x, sp0.y, 9, 0, Math.PI*2);
+            octx.strokeStyle='rgba(106,166,255,0.95)'; octx.lineWidth=1.5; octx.setLineDash([2,2]); octx.stroke(); octx.restore(); }
+        }
+
+        octx.restore();
+        updateButtons();
+      }
+
+      function updateButtons(){
+        var hasImage=!!img;
+        applyAllBtn.disabled=!(hasImage&&(selections.length>0||currentSel||(mode==='poly'&&polyPoints.length>=3)));
+        detectBtn.disabled=!hasImage;
+        downloadPngBtn.disabled=!hasImage; downloadJpgBtn.disabled=!hasImage;
+        clearAutoBtn.disabled=appliedSelections.filter(function(a){return a.auto;}).length===0;
+        clearAppliedBtn.disabled=appliedSelections.length===0;
+        var hasSel=selectedAreas.length>0; toggleActiveBtn.disabled=!hasSel; removeSelectedBtn.disabled=!hasSel;
+        selCount.textContent=String(selections.length)+' Bereiche in Warteschlange';
+      }
+      function resetInteraction(){ isDragging=false; start=null; currentSel=null; editMode=null; editTarget=null; activeHandle=null; vertexSelect=null; renderOverlay(); }
+
+      // --- Selection tests (vereinfacht) ---
+      function hitTest(x,y){
+        for(var i=selections.length-1;i>=0;i--){ octx.beginPath(); pathForSelection(octx,selections[i]); if(octx.isPointInPath(x,y)) return {list:'pending',index:i}; }
+        for(var j=appliedSelections.length-1;j>=0;j--){ octx.beginPath(); pathForSelection(octx,appliedSelections[j]); if(octx.isPointInPath(x,y)) return {list:'applied',index:j}; }
+        return null;
+      }
+
+      // --- Drawing basic (vereinfacht, stabil) ---
+      var mouseDown=false, primedStart=null, drawStarted=false, DRAG_THRESHOLD=5;
+
+      canvas.addEventListener('mousedown', function(e){
+        if(!img) return;
+        mouseDown=true;
+        var p=toCanvasCoords(e);
+
+        var hit = hitTest(p.x,p.y);
+        if(hit){
+          if(e.shiftKey){
+            var idx=selectedAreas.findIndex(function(sa){return sa.list===hit.list && sa.index===hit.index;});
+            if(idx>=0) selectedAreas.splice(idx,1); else selectedAreas.push(hit);
+          } else {
+            selectedAreas=[hit];
+          }
+          renderOverlay(); return;
+        }
+
+        selectedAreas=[];
+        primedStart=p; drawStarted=false; isDragging=false; currentSel=null; renderOverlay();
+      });
+
+      canvas.addEventListener('mousemove', function(e){
+        if(!img) return;
+        if(!primedStart) return;
+        var p=toCanvasCoords(e);
+        if(!drawStarted && Math.hypot(p.x-primedStart.x,p.y-primedStart.y)>DRAG_THRESHOLD){
+          drawStarted=true; isDragging=true; start=primedStart;
+        }
+        if(drawStarted){
+          if(mode==='circle'){
+            var r=Math.hypot(p.x-start.x,p.y-start.y);
+            currentSel={type:'circle',cx:start.x,cy:start.y,r:r};
+          } else {
+            currentSel={type:'rect',x:start.x,y:start.y,w:p.x-start.x,h:p.y-start.y};
+          }
+          renderOverlay();
+        }
+      });
+
+      canvas.addEventListener('mouseup', function(){
+        mouseDown=false;
+        if(!img) return;
+        if(drawStarted){
+          isDragging=false; drawStarted=false;
+          if(!currentSel){ primedStart=null; return; }
+          var b=boundsForSelection(currentSel);
+          if(b.w<=4||b.h<=4) currentSel=null;
+          renderOverlay();
+        }
+        primedStart=null;
+      });
+
+      // --- Anwenden ---
+      function applyAll(){
+        if(currentSel){ selections.push(currentSel); currentSel=null; }
+        if(mode==='poly'&&polyPoints.length>=3){ selections.push({type:'polygon',points:[].concat(polyPoints)}); polyPoints=[]; }
+        if(!selections.length) return;
+        for(var i=0;i<selections.length;i++){
+          var s=selections[i];
+          if(typeof s.active==='undefined') s.active=true;
+          if(!s.effect) s.effect=defaultEffect;
+          if(typeof s.blockSize==='undefined') s.blockSize=defaultBlockSize;
+          if(typeof s.blurRadius==='undefined') s.blurRadius=defaultBlurRadius;
+        }
+        appliedSelections=appliedSelections.concat(selections);
+        selections=[]; selectedAreas=[];
+        renderCompositePixelation(); renderOverlay(); syncUIToSelection();
+      }
+      applyAllBtn.addEventListener('click', applyAll);
+
+      function syncUIToSelection(){
+        if(selectedAreas.length){
+          var first=selectedAreas[0];
+          var list=first.list==='applied'?appliedSelections:selections;
+          var sel=list[first.index];
+          var effect=(sel && sel.effect) ? sel.effect : defaultEffect;
+          if(effect==='blur'){
+            effectBlur.checked=true; showEffect('blur');
+            blurRadiusInput.value=String(sel.blurRadius||defaultBlurRadius);
+            blurLabel.textContent=(sel.blurRadius||defaultBlurRadius)+'px';
+          } else {
+            effectPixel.checked=true; showEffect('pixelate');
+            blockSizeInput.value=String(sel.blockSize||defaultBlockSize);
+            paramLabel.textContent=(sel.blockSize||defaultBlockSize)+'px';
+          }
+        } else {
+          if(defaultEffect==='blur'){
+            effectBlur.checked=true; showEffect('blur');
+            blurRadiusInput.value=String(defaultBlurRadius); blurLabel.textContent=defaultBlurRadius+'px';
+          } else {
+            effectPixel.checked=true; showEffect('pixelate');
+            blockSizeInput.value=String(defaultBlockSize); paramLabel.textContent=defaultBlockSize+'px';
+          }
+        }
+        clearAutoBtn.disabled=appliedSelections.filter(function(a){return a.auto;}).length===0;
+        clearAppliedBtn.disabled=appliedSelections.length===0;
+        toggleActiveBtn.disabled=selectedAreas.length===0;
+        removeSelectedBtn.disabled=selectedAreas.length===0;
+      }
+
+      function showEffect(kind){
+        if(kind==='blur'){ pixelControls.style.display='none'; blurControls.style.display='block'; }
+        else { pixelControls.style.display='block'; blurControls.style.display='none'; }
+      }
+
+      effectPixel.addEventListener('change', function(){
+        if(!effectPixel.checked) return;
+        showEffect('pixelate');
+        if(selectedAreas.length){
+          selectedAreas.forEach(function(sa){
+            var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+            if(sel){ sel.effect='pixelate'; if(typeof sel.blockSize==='undefined') sel.blockSize=defaultBlockSize; }
+          });
+          renderCompositePixelation(); renderOverlay();
+        } else defaultEffect='pixelate';
+      });
+
+      effectBlur.addEventListener('change', function(){
+        if(!effectBlur.checked) return;
+        showEffect('blur');
+        if(selectedAreas.length){
+          selectedAreas.forEach(function(sa){
+            var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+            if(sel){ sel.effect='blur'; if(typeof sel.blurRadius==='undefined') sel.blurRadius=defaultBlurRadius; }
+          });
+          renderCompositePixelation(); renderOverlay();
+        } else defaultEffect='blur';
+      });
+
+      // Slider Pixelgröße (MAX 50)
+      blockSizeInput.addEventListener('input', function(){
+        var v=Math.max(1,Math.min(50,Number(blockSizeInput.value)||1));
+        paramLabel.textContent=v+'px';
+        if(selectedAreas.length){
+          selectedAreas.forEach(function(sa){
+            var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+            if(sel) sel.blockSize=v;
+          });
+          renderCompositePixelation(); renderOverlay();
+        } else defaultBlockSize=v;
+      });
+
+      blurRadiusInput.addEventListener('input', function(){
+        var v=Math.max(1,Math.min(80,Number(blurRadiusInput.value)||1));
+        blurLabel.textContent=v+'px';
+        if(selectedAreas.length){
+          selectedAreas.forEach(function(sa){
+            var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+            if(sel) sel.blurRadius=v;
+          });
+          renderCompositePixelation(); renderOverlay();
+        } else defaultBlurRadius=v;
+      });
+
+      toggleActiveBtn.addEventListener('click', function(){
+        if(!selectedAreas.length) return;
+        selectedAreas.forEach(function(sa){
+          var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+          if(sel) sel.active = (sel.active===false)? true:false;
+        });
+        renderCompositePixelation(); renderOverlay();
+      });
+
+      removeSelectedBtn.addEventListener('click', function(){
+        if(!selectedAreas.length) return;
+        var pend=selectedAreas.filter(function(sa){return sa.list==='pending';}).map(function(sa){return sa.index;}).sort(function(a,b){return b-a;});
+        var appl=selectedAreas.filter(function(sa){return sa.list==='applied';}).map(function(sa){return sa.index;}).sort(function(a,b){return b-a;});
+        for(var i=0;i<pend.length;i++) selections.splice(pend[i],1);
+        for(var j=0;j<appl.length;j++) appliedSelections.splice(appl[j],1);
+        selectedAreas=[]; renderCompositePixelation(); renderOverlay(); syncUIToSelection();
+      });
+
+      clearAutoBtn.addEventListener('click', function(){
+        appliedSelections=appliedSelections.filter(function(a){return !a.auto;});
+        selectedAreas=[]; renderCompositePixelation(); renderOverlay(); syncUIToSelection();
+      });
+      clearAppliedBtn.addEventListener('click', function(){
+        appliedSelections=[]; selectedAreas=[]; renderCompositePixelation(); renderOverlay(); syncUIToSelection();
+      });
+
+      // Pfeile/Space/Delete
+      window.addEventListener('keydown', function(e){
+        if(e.code==='Space'&&selectedAreas.length){
+          e.preventDefault();
+          selectedAreas.forEach(function(sa){
+            var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+            if(sel) sel.active = (sel.active===false)? true:false;
+          });
+          renderCompositePixelation(); renderOverlay();
+        }
+        if(selectedAreas.length && (e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown')){
+          e.preventDefault();
+          var delta=(e.key==='ArrowLeft'||e.key==='ArrowDown')?-1:1;
+          var step=e.shiftKey?5:1; var change=delta*step;
+          selectedAreas.forEach(function(sa){
+            var list=sa.list==='applied'?appliedSelections:selections; var sel=list[sa.index];
+            if(!sel) return;
+            if(sel.effect==='blur'){ sel.blurRadius=Math.max(1,Math.min(80,Number(sel.blurRadius||defaultBlurRadius)+change)); }
+            else { sel.blockSize=Math.max(1,Math.min(50,Number(sel.blockSize||defaultBlockSize)+change)); }
+          });
+          var first=selectedAreas[0]; var list=first.list==='applied'?appliedSelections:selections; var sel=list[first.index];
+          if(sel){ if(sel.effect==='blur'){ blurRadiusInput.value=String(sel.blurRadius); blurLabel.textContent=sel.blurRadius+'px'; } else { blockSizeInput.value=String(sel.blockSize); paramLabel.textContent=sel.blockSize+'px'; } }
+          renderCompositePixelation(); renderOverlay();
+        }
+        if(e.key==='Delete' && selectedAreas.length){
+          e.preventDefault();
+          var pend=selectedAreas.filter(function(sa){return sa.list==='pending';}).map(function(sa){return sa.index;}).sort(function(a,b){return b-a;});
+          var appl=selectedAreas.filter(function(sa){return sa.list==='applied';}).map(function(sa){return sa.index;}).sort(function(a,b){return b-a;});
+          for(var i=0;i<pend.length;i++) selections.splice(pend[i],1);
+          for(var j=0;j<appl.length;j++) appliedSelections.splice(appl[j],1);
+          selectedAreas=[]; renderCompositePixelation(); renderOverlay(); syncUIToSelection();
+        }
+      });
+
+      // ===== Zoom =====
+      function applyZoom(){ stage.style.transform='scale('+zoom+')'; }
+      function zoomTo(z){ zoom=Math.min(MAX_Z,Math.max(MIN_Z,z)); applyZoom(); }
+      function zoomDelta(f){ zoomTo(zoom*f); }
+      function fitToScreen(){ if(!img) return; var pad=24; var aw=wrap.clientWidth-pad; var ah=wrap.clientHeight-pad; var sx=aw/canvas.width, sy=ah/canvas.height; zoomTo(Math.min(sx,sy,1)); }
+      zoomInBtn.addEventListener('click', function(){ zoomDelta(1.2); });
+      zoomOutBtn.addEventListener('click', function(){ zoomDelta(1/1.2); });
+      zoom100Btn.addEventListener('click', function(){ zoomTo(1); });
+      zoomFitBtn.addEventListener('click', fitToScreen);
+      wrap.addEventListener('wheel',function(e){
+        if(!img) return;
+        if(e.ctrlKey||typeof e.deltaY==='number'){
+          e.preventDefault(); var f=e.deltaY>0?(1/1.12):1.12; zoomDelta(f);
+        }
+      },{passive:false});
+
+      // ===== File load + Drag&Drop =====
+      function handleFile(file){
+        try{
+          if(!file){ showError('Keine Datei erkannt.'); return; }
+          var type=(file.type||'').toLowerCase(); var name=(file.name||'');
+          var byMime=type.indexOf('image/')===0;
+          var byExt=/\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(name);
+          if(!(byMime||byExt)){ showError('Bitte Bilddatei wählen (PNG, JPG, WEBP, GIF, BMP, TIFF).'); return; }
+          originalName = name || 'bild';
+          if(originalSrc && originalSrc.indexOf('blob:')===0){ try{ URL.revokeObjectURL(originalSrc); }catch(_){} }
+          originalSrc=URL.createObjectURL(file);
+
+          img=new Image();
+          img.onload=function(){
+            setCanvasSize(img.naturalWidth,img.naturalHeight);
+            selections=[]; appliedSelections=[]; selectedAreas=[];
+            defaultBlockSize=Number(blockSizeInput.value)||7;
+            defaultBlurRadius=Number(blurRadiusInput.value)||8;
+            drawBase(); renderOverlay(); fitToScreen(); updateButtons();
+            detectBtn.disabled=false; downloadPngBtn.disabled=false; downloadJpgBtn.disabled=false;
+          };
+          img.onerror=function(err){ console.error('Bild kann nicht geladen werden', err); showError('Bild konnte nicht geladen werden. Wird das Format unterstützt?'); };
+          img.src=originalSrc;
+        }catch(e){ console.error('handleFile error', e); showError('Fehler beim Öffnen der Datei: '+(e && e.message ? e.message : e)); }
+      }
+
+      dropzone.addEventListener('click', function(e){ if(e.target!==fileInput) fileInput.click(); });
+      fileInput.addEventListener('change', function(e){
+        var fs = e.target && e.target.files ? e.target.files : null;
+        handleFile(fs && fs[0] ? fs[0] : null);
+      });
+
+      function isImageByExt(name){ name=name||''; return /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(name); }
+      function isImageMime(type){ type=(type||'').toLowerCase(); return type.indexOf('image/')===0; }
+      function onDragEnterOver(e, target){
+        e.preventDefault(); e.stopPropagation();
+        if(e.dataTransfer) e.dataTransfer.dropEffect='copy';
+        if(target===dropzone){ dropzone.style.borderColor='#6aa6ff'; dropzone.style.background='#0f151f'; }
+      }
+      function onDragLeaveDrop(e, target){
+        e.preventDefault(); e.stopPropagation();
+        if(target===dropzone){ dropzone.style.borderColor='#3a4152'; dropzone.style.background='#0f131c'; }
+      }
+      function onDrop(e){
+        e.preventDefault(); e.stopPropagation();
+        var dt=e.dataTransfer; var file=null;
+        try{
+          if(dt && dt.files && dt.files.length){
+            for(var i=0;i<dt.files.length;i++){ var f=dt.files[i]; if(isImageMime(f.type)||isImageByExt(f.name)){ file=f; break; } }
+            if(!file) file=dt.files[0];
+          } else if(dt && dt.items && dt.items.length){
+            for(var j=0;j<dt.items.length;j++){ var item=dt.items[j]; if(item.kind==='file'){ var f2=item.getAsFile(); if(!f2) continue; if(isImageMime(f2.type)||isImageByExt(f2.name)){ file=f2; break; } } }
+          }
+        }catch(err){ console.error('drop parse error', err); showError('Fehler beim Einfügen per Drag&Drop.'); }
+        handleFile(file);
+      }
+
+      [dropzone, wrap, document].forEach(function(t){
+        t.addEventListener('dragenter', function(e){ onDragEnterOver(e, this); }, {passive:false});
+        t.addEventListener('dragover',  function(e){ onDragEnterOver(e, this); }, {passive:false});
+        t.addEventListener('dragleave', function(e){ onDragLeaveDrop(e, this); });
+        t.addEventListener('drop',      function(e){ onDragLeaveDrop(e, this); onDrop(e); });
+      });
+
+      // ===== Downloads =====
+      function baseName(name){ if(!name) return 'verpixelt'; return name.replace(/[/\\]+/g,' ').replace(/\.[^.]+$/,'') || 'verpixelt'; }
+      function download(type){
+        if(!img) return;
+        renderCompositePixelation();
+        var mime=type==='jpg'?'image/jpeg':'image/png';
+        var quality=type==='jpg'?0.92:1.0;
+        var url=canvas.toDataURL(mime,quality);
+        var a=document.createElement('a'); a.href=url;
+        var base=baseName(originalName);
+        a.download = type==='jpg' ? (base+'_verpixelt.jpg') : (base+'_verpixelt.png');
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      downloadPngBtn.addEventListener('click', function(){ download('png'); });
+      downloadJpgBtn.addEventListener('click', function(){ download('jpg'); });
+
+      // ===== Init =====
+      paramLabel.textContent=blockSizeInput.value+'px';
+      blurLabel.textContent=blurRadiusInput.value+'px';
+      overlay.style.pointerEvents='none';
+      renderOverlay(); updateButtons();
+    }catch(e){
+      console.error(e);
+      showError('Initialisierungsfehler: '+(e && e.message ? e.message : e));
+    }
+  });
+})();
+  </script>
+</body>
+</html>
